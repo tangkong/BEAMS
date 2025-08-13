@@ -13,6 +13,7 @@ from uuid import UUID
 import qtawesome as qta
 from py_trees.common import Status
 from qtpy import QtCore
+from qtpynodeeditor import FlowScene, PortType
 
 from beams.service.remote_calls.behavior_tree_pb2 import (NodeInfo, TickStatus,
                                                           TreeDetails,
@@ -475,3 +476,23 @@ class BehaviorTreeModel(QtCore.QAbstractItemModel):
             return item.icon()
 
         return None
+
+
+def create_scene_nodes(scene: FlowScene, tree_item: QtBTreeItem) -> None:
+    def _inner_create_node(tree_item: QtBTreeItem):
+        if tree_item.node_type == "":
+            model_name = " Root "  # TODO: deal with this spacing issue upstream
+        else:
+            model_name = tree_item.node_type
+        model_cls = scene.registry.get_model_by_name(model_name)[0]
+        node = scene.create_node(model_cls)
+
+        for i, child in enumerate(tree_item.children):
+            child_node = _inner_create_node(child)
+            scene.create_connection(
+                node[PortType.output][i], child_node[PortType.input][0]
+            )
+
+        return node
+
+    _inner_create_node(tree_item)
