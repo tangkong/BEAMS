@@ -27,7 +27,7 @@ STATUS_ICON_MAP = {
     TickStatus.INVALID: "fa5s.minus-circle",
     TickStatus.SUCCESS: "fa5s.check-circle",
     TickStatus.RUNNING: "fa5s.running",
-    TickStatus.FAILURE: "fa5s.times-circlde",
+    TickStatus.FAILURE: "fa5s.times-circle",
 }
 
 
