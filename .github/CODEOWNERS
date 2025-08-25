@@ -1,5 +1,5 @@
 # default group
-* @pcdshub/python-reviewers @joshc-slac
+* @pcdshub/python-reviewers
 
 # github folder holds administrative files
 .github/** @pcdshub/software-admin
