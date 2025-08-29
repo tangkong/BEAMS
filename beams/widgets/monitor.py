@@ -10,7 +10,8 @@ from functools import partial
 from typing import List, Optional
 
 from qtpy import QtWidgets
-from qtpynodeeditor import FlowView
+from qtpy.QtGui import QColor
+from qtpynodeeditor import FlowView, Node
 
 from beams.service.remote_calls.behavior_tree_pb2 import (
     BehaviorTreeUpdateMessage, NodeId)
@@ -18,7 +19,9 @@ from beams.service.rpc_client import RPCClient
 from beams.widgets.core import DesignerDisplay, insert_widget
 from beams.widgets.heartbeat_info import HeartbeatInfo
 from beams.widgets.node_models import create_editor_view
-from beams.widgets.qt_models import BehaviorTreeModel, QtBTreeItem
+from beams.widgets.qt_models import (TICK_STATUS_COLOR_MAP,
+                                     TREE_STATUS_COLOR_MAP, BehaviorTreeModel,
+                                     QtBTreeItem, create_scene_nodes)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +40,13 @@ class TreeSnapshot:
 
 
 class MonitorPage(DesignerDisplay, QtWidgets.QWidget):
+    """
+    TODO:
+    - generate nodes
+    - color nodes based on status at each tick
+    - determine how to collapse nodes?
+    - disable delete/add widgets
+    """
     filename = "monitor_page.ui"
 
     tree_view: QtWidgets.QTreeView
@@ -97,6 +107,14 @@ class MonitorPage(DesignerDisplay, QtWidgets.QWidget):
         self.tick_spin_box.valueChanged.connect(
             partial(self.update_display_for_tick, zero_indexed=False)
         )
+        self.auto_arrange_button.clicked.connect(self.auto_arrange_nodes)
+
+    def auto_arrange_nodes(self, *args, **kwargs) -> None:
+        """Auto-arrange the nodes in the node editor using a pygraphviz layout"""
+        try:
+            self.node_editor.scene.auto_arrange(layout="pygraphviz", prog="dot")
+        except ImportError:
+            logger.debug("pygraphviz not available to run auto arrange routine")
 
     def grab_tick(self) -> None:
         """
@@ -168,6 +186,12 @@ class MonitorPage(DesignerDisplay, QtWidgets.QWidget):
                 msg=tick_snapshot.tree_update
             )
 
+        self.update_node_status(tick_num)
+
+        if not self.node_editor.scene.nodes:
+            self.construct_nodes()
+            self.auto_arrange_nodes()
+
     def incrememt_tick(self):
         curr_tick = self.tick_slider.value()
         self.tick_slider.setValue(curr_tick + 1)
@@ -175,3 +199,52 @@ class MonitorPage(DesignerDisplay, QtWidgets.QWidget):
     def decrememt_tick(self):
         curr_tick = self.tick_slider.value()
         self.tick_slider.setValue(curr_tick - 1)
+
+    def construct_nodes(self):
+        """construct nodes based on loaded tree"""
+        if len(self.tick_history) == 0:
+            self.grab_tick()
+
+        tree = self.tick_history[0]
+        create_scene_nodes(self.node_editor.scene, tree.tree_item)
+
+    def update_node_status(self, tick_idx: int):
+        """
+        Update node color to reflect statuses from tick index tick_idx.
+        Color the node backgrounds using STATUS_COLOR_MAP.
+        Node colors are adjusted using each node's style.
+        Updates nodes in place based on uuid reported from server.
+        """
+        if not (0 <= tick_idx < len(self.tick_history)):
+            return
+        tree_item = self.tick_history[tick_idx].tree_item
+        scene = self.node_editor.scene
+
+        if not scene.nodes:
+            return
+
+        for item in tree_item.walk_tree():
+            item_uuid = item.node_id
+            if item_uuid is None:
+                continue
+
+            node: Node = scene.nodes[str(item_uuid)]
+
+            status = item.status
+            # gRPC enums are basically ints, can't isinstance check or use
+            # two different enums as keys in one dict without collisions
+            if item.parent is None:
+                color_name = TREE_STATUS_COLOR_MAP.get(status, 'grey')
+            else:
+                color_name = TICK_STATUS_COLOR_MAP.get(status, 'grey')
+            color_rgb = QColor(color_name).getRgb()
+            # Set NodeStyle colors for visual feedback
+            new_grad_colors = []
+            # replace existing colors, keeping original gradient settings
+            for i, (grad_extent, _) in enumerate(node.style.gradient_colors):
+                rgb = tuple(max(val - 30 * i, 0) for val in color_rgb[:-1])
+                new_grad_colors.append((grad_extent, QColor(*rgb)))
+
+            node.style.gradient_colors = tuple(new_grad_colors)
+            if node.graphics_object:
+                node.graphics_object.update()

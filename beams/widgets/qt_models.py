@@ -1,5 +1,6 @@
 """
-Qt models and items for use across the BEAMS GUI.
+Qt models and items for use across the BEAMS GUI.  Contains TreeViews, Models,
+and other Qt-related classes
 """
 
 from __future__ import annotations
@@ -28,6 +29,20 @@ STATUS_ICON_MAP = {
     TickStatus.SUCCESS: "fa5s.check-circle",
     TickStatus.RUNNING: "fa5s.running",
     TickStatus.FAILURE: "fa5s.times-circle",
+}
+
+TICK_STATUS_COLOR_MAP = {
+    TickStatus.INVALID: "grey",
+    TickStatus.SUCCESS: "green",
+    TickStatus.RUNNING: "orange",
+    TickStatus.FAILURE: "red",
+}
+
+TREE_STATUS_COLOR_MAP = {
+    TreeStatus.ERROR: "red",
+    TreeStatus.IDLE: "grey",
+    TreeStatus.TICKING: "orange",
+    TreeStatus.WAITING_ACK: "magenta",
 }
 
 
@@ -257,7 +272,8 @@ class QtBTreeItem:
     def icon(self):
         """return icon for this item"""
         icon_id = STATUS_ICON_MAP.get(self.status)
-        return qta.icon(icon_id)
+        icon_color = TICK_STATUS_COLOR_MAP.get(self.status)
+        return qta.icon(icon_id, color=icon_color)
 
     def walk_tree(
         self,
@@ -486,6 +502,14 @@ def create_scene_nodes(scene: FlowScene, tree_item: QtBTreeItem) -> None:
             model_name = tree_item.node_type
         model_cls = scene.registry.get_model_by_name(model_name)[0]
         node = scene.create_node(model_cls)
+
+        # hack the scene to use our uids
+        # we do this here while we're matching items to nodes
+        if tree_item.node_id is not None:
+            prev_uid = node.id
+            node._uid = str(tree_item.node_id)
+            scene._nodes.pop(prev_uid)
+            scene._nodes[node.id] = node
 
         for i, child in enumerate(tree_item.children):
             child_node = _inner_create_node(child)
