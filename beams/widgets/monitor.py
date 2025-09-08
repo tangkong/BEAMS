@@ -186,17 +186,21 @@ class MonitorPage(DesignerDisplay, QtWidgets.QWidget):
                 msg=tick_snapshot.tree_update
             )
 
-        self.update_node_status(tick_num)
-
         if not self.node_editor.scene.nodes:
             self.construct_nodes()
             self.auto_arrange_nodes()
 
+        self.update_node_status(tick_num)
+
     def incrememt_tick(self):
+        if not self.tick_history:
+            return
         curr_tick = self.tick_slider.value()
         self.tick_slider.setValue(curr_tick + 1)
 
     def decrememt_tick(self):
+        if not self.tick_history:
+            return
         curr_tick = self.tick_slider.value()
         self.tick_slider.setValue(curr_tick - 1)
 
