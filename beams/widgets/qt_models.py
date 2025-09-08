@@ -519,4 +519,5 @@ def create_scene_nodes(scene: FlowScene, tree_item: QtBTreeItem) -> None:
 
         return node
 
-    _inner_create_node(tree_item)
+    for child in tree_item.children:
+        _inner_create_node(child)
