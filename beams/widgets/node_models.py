@@ -120,9 +120,10 @@ class MultiChildNodeModel(NodeDataModel):
 
         self.output_connections = []
 
-    @property
-    def caption(self):
-        return self.name
+        self.caption = self.name
+
+        # give each node a unique style, inherited from NodeDataModel by default
+        self._style = deepcopy(self.style)
 
     def validation_state(self) -> NodeValidationState:
         return self._validation_state
@@ -130,7 +131,7 @@ class MultiChildNodeModel(NodeDataModel):
     def validation_message(self) -> str:
         return self._validation_message
 
-    def set_in_data(self, node_data: BlankNodeData, port: Port):
+    def set_in_data(self, node_data: NodeData, port: Port):
         """
         Callback run when input data is changed.  We hook this to verify
         that there is a valid parent node
@@ -212,12 +213,12 @@ class LeafNodeModel(NodeDataModel):
         self._parent_node = None
         self._validation_state = NodeValidationState.warning
         self._validation_message = "Uninitialized"
+        # give each node a unique style, inherited from NodeDataModel by default
+        self._style = deepcopy(self.style)
 
-    @property
-    def caption(self):
-        return self.name
+        self.caption = self.name
 
-    def set_in_data(self, node_data: BlankNodeData, port: Port):
+    def set_in_data(self, node_data: NodeData, port: Port):
         """
         Callback run when input data is changed.  We hook this to verify
         that there is a valid parent node

@@ -6,12 +6,13 @@ from pathlib import Path
 from typing import Optional, Union
 
 from qtpy import QtWidgets
-from qtpynodeeditor import FlowView, PortType
+from qtpynodeeditor import FlowView
 
 from beams.tree_config.base import BehaviorTreeItem
 from beams.widgets.core import DesignerDisplay, insert_widget
 from beams.widgets.node_models import create_editor_view, tree_from_graph
-from beams.widgets.qt_models import BehaviorTreeModel, QtBTreeItem
+from beams.widgets.qt_models import (BehaviorTreeModel, QtBTreeItem,
+                                     create_scene_nodes)
 
 logger = logging.getLogger(__name__)
 
@@ -103,23 +104,7 @@ class EditPage(DesignerDisplay, QtWidgets.QWidget):
         tree_item = QtBTreeItem.from_behavior_tree_item(tree)
         scene = self.node_editor.scene
 
-        def _inner_create_node(tree_item: QtBTreeItem):
-            if tree_item.node_type == "":
-                model_name = " Root "  # TODO: deal with this spacing issue upstream
-            else:
-                model_name = tree_item.node_type
-            model_cls = scene.registry.get_model_by_name(model_name)[0]
-            node = scene.create_node(model_cls)
-
-            for i, child in enumerate(tree_item.children):
-                child_node = _inner_create_node(child)
-                scene.create_connection(
-                    node[PortType.output][i], child_node[PortType.input][0]
-                )
-
-            return node
-
-        _ = _inner_create_node(tree_item)
+        create_scene_nodes(scene, tree_item)
 
         self.auto_arrange_nodes()
 
