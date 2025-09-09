@@ -203,7 +203,7 @@ class QtBTreeItem:
         root_item = QtBTreeItem(
             name=tree.tree_id.name,
             node_id=UUID(tree.tree_id.uuid),
-            node_type="<root>",
+            node_type="",
             status=tree.tree_status,
         )
         root_item.addChild(tree_root_item)
