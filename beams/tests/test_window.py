@@ -3,7 +3,7 @@ from pytestqt.qtbot import QtBot
 from beams.widgets.window import MainWindow
 
 
-def test_main_window(qtbot: QtBot):
+def test_main_window(qtbot: QtBot, dummy_beams_config):
     window = MainWindow()
     qtbot.add_widget(window)
 

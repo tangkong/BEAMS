@@ -211,3 +211,8 @@ TEST_CONFIG_PATHS = test_configs()
 @pytest.fixture(params=TEST_CONFIG_PATHS)
 def configs(request):
     return request.param
+
+
+@pytest.fixture
+def dummy_beams_config():
+    os.environ["BEAMS_CFG"] = str(Path(__file__).parent / "config.cfg")
